@@ -1,8 +1,9 @@
 import pickle
 
+from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
-from analysis import bridge_lat, bridge_lon, event_time
+bridge_lat, bridge_lon = 39.21596, -76.52978 # TODO: duplication.
 
 client = Client("IRIS")
 
@@ -12,8 +13,8 @@ inv = client.get_stations(
     level="response",
     latitude=bridge_lat,
     longitude=bridge_lon,
-    starttime=event_time,
-    endtime=event_time + 60,
+    starttime=UTCDateTime("2000-01-01"),
+    endtime=UTCDateTime("2024-04-01"),
     # Radius in degrees.
     minradius=0,
     maxradius=2,
