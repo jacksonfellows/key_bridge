@@ -13,17 +13,23 @@ with open("inv.pickle", "rb") as f:
 
 client = Client("rrepo/data/timeseries.sqlite")
 
+
 def load_st(event_time, event_lat, event_lon):
-    st = client.get_waveforms("*", "*", "*", "*", event_time - 5*60, event_time + 5*60)
+    st = client.get_waveforms(
+        "*", "*", "*", "*", event_time - 5 * 60, event_time + 5 * 60
+    )
     # TODO: Convert to displacement or velocity?
-    st.remove_response(inventory=inv, output="VEL")
+    st.remove_response(inventory=inv, output="DISP")
     for tr in st:
         coords = inv.get_coordinates(tr.get_id())
-        dist, _, azimuth = gps2dist_azimuth(event_lat, event_lon, coords["latitude"], coords["longitude"])
+        dist, _, azimuth = gps2dist_azimuth(
+            event_lat, event_lon, coords["latitude"], coords["longitude"]
+        )
         tr.stats.distance = dist
         tr.stats.back_azimuth = azimuth
     st.rotate("NE->RT")
     return st
+
 
 def compute_spectrum(tr):
     tr = tr.copy()
@@ -34,7 +40,7 @@ def compute_spectrum(tr):
     return f, Pxx
 
 
-class Event():
+class Event:
     def __init__(self, event_time, lat, lon):
         self.event_time = event_time
         self.lat = lat
@@ -46,26 +52,36 @@ class Event():
         st2 = st2.copy()
         st2.taper(0.005)
         st2.filter(**filter_kwargs)
-        st2.slice(starttime=self.event_time - pre_s, endtime=self.event_time + post_s).plot()
+        st2.slice(
+            starttime=self.event_time - pre_s, endtime=self.event_time + post_s
+        ).plot()
 
     def plot_spectrogram(self, station_code):
         st2 = self.st.select(station=station_code, component="Z")
         st2 = st2.copy()
-        st2.slice(starttime=self.event_time, endtime=self.event_time + 1*60).spectrogram()
+        st2.slice(
+            starttime=self.event_time, endtime=self.event_time + 1 * 60
+        ).spectrogram()
 
     def plot_section(self, component="Z", **filter_kwargs):
         st2 = self.st.select(component=component)
         st2 = st2.copy()
         st2.taper(0.005)
         st2.filter(**filter_kwargs)
-        st2.slice(starttime=self.event_time, endtime=self.event_time + 5*60).plot(type="section", orientation="horizontal")
+        st2.slice(starttime=self.event_time, endtime=self.event_time + 5 * 60).plot(
+            type="section", orientation="horizontal"
+        )
 
-    def plot_spectra(self, station_code):
+    def plot_spectra(self, station_code, start_s, end_s):
         # TODO: Take shaking start and end as arguments.
         tr = self.st.select(component="Z", station=station_code)[0]
         print(len(tr))
-        f, P1 = compute_spectrum(tr.slice(starttime=self.event_time + 18, endtime=self.event_time + 60))
-        _, P2 = compute_spectrum(tr.slice(starttime=self.event_time - 60, endtime=self.event_time))
+        f, P1 = compute_spectrum(
+            tr.slice(starttime=self.event_time + start_s, endtime=self.event_time + end_s)
+        )
+        _, P2 = compute_spectrum(
+            tr.slice(starttime=self.event_time - 60, endtime=self.event_time)
+        )
         plt.xlabel("Frequency [Hz]")
         plt.xlim(0.1, 50)
         plt.xscale("log")
@@ -74,6 +90,7 @@ class Event():
         plt.plot(f, P1, "r", label="event")
         plt.legend()
         plt.show()
+
 
 bridge_collision_time = UTCDateTime("2024-03-26T5:29:00Z")
 bridge_lat, bridge_lon = 39.21596, -76.52978
